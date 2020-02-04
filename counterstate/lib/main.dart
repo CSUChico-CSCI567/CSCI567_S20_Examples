@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 void main(){
   runApp(MyApp());
@@ -47,21 +49,66 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
-  void _add(){
+  void _add() async{
       // This call to setState tells the Flutter framework that something has
       // changed in this State, which causes it to rerun the build method below
       // so that the display can reflect the updated values. If we changed
       // _counter without calling setState(), then the build method would not be
       // called again, and so nothing would appear to happen.
-      _counter++;
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      _counter = (prefs.getInt('counter') ?? 0) + 1;
+      print('Pressed $_counter times.');
+      await prefs.setInt('counter', _counter);
+  }
+  void _subtract() async{
+    // This call to setState tells the Flutter framework that something has
+    // changed in this State, which causes it to rerun the build method below
+    // so that the display can reflect the updated values. If we changed
+    // _counter without calling setState(), then the build method would not be
+    // called again, and so nothing would appear to happen.
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _counter = (prefs.getInt('counter') ?? 0) - 1;
+    print('Pressed $_counter times.');
+    await prefs.setInt('counter', _counter);
   }
 
-  void _incrementCounter() {
+  void _getCounter() async{
+    // This call to setState tells the Flutter framework that something has
+    // changed in this State, which causes it to rerun the build method below
+    // so that the display can reflect the updated values. If we changed
+    // _counter without calling setState(), then the build method would not be
+    // called again, and so nothing would appear to happen.
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    _counter = (prefs.getInt('counter') ?? 0);
+    setState(() {
+      
+    });
+  }
+
+  void _decrementCount() async{
+     await _subtract();
+     setState(() {
+
+     });
+  }
+
+  void _incrementCounter() async{
 //      _counter++;
-      setState(_add);
+    await _add();
+    setState(() {
+
+    });
 
 
 //    setState(_add);
+  }
+
+  @override
+  initState() {
+    super.initState();
+    // Add listeners to this class
+    _getCounter();
+
   }
 
   @override
@@ -116,7 +163,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                     RaisedButton(
-                      onPressed: () => setState(() => _counter--),
+                      onPressed: _decrementCount,
                       child: Text(
                           'Decrement',
                           style: TextStyle(fontSize: 20)
