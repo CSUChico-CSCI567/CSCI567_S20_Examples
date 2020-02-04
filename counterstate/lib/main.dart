@@ -81,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _counter = (prefs.getInt('counter') ?? 0);
     setState(() {
-      
+
     });
   }
 
