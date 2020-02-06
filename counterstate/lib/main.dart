@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 
 
 void main(){
@@ -24,13 +27,47 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.purple,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: 'Flutter Demo Home Page', storage: CounterStorage()),
     );
   }
 }
 
+class CounterStorage {
+  Future<String> get _localPath async {
+    final directory = await getApplicationDocumentsDirectory();
+
+    return directory.path;
+  }
+
+  Future<File> get _localFile async {
+    final path = await _localPath;
+    return File('$path/counter.txt');
+  }
+
+  Future<int> readCounter() async {
+    try {
+      final file = await _localFile;
+
+      // Read the file
+      String contents = await file.readAsString();
+
+      return int.parse(contents);
+    } catch (e) {
+      // If encountering an error, return 0
+      return 0;
+    }
+  }
+
+  Future<File> writeCounter(int counter) async {
+    final file = await _localFile;
+
+    // Write the file
+    return file.writeAsString('$counter');
+  }
+}
+
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
+  MyHomePage({Key key, this.title, @required this.storage}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -42,6 +79,8 @@ class MyHomePage extends StatefulWidget {
   // always marked "final".
 
   final String title;
+  final CounterStorage storage;
+
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -49,65 +88,35 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
-  void _add() async{
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      _counter = (prefs.getInt('counter') ?? 0) + 1;
-      print('Pressed $_counter times.');
-      await prefs.setInt('counter', _counter);
-  }
-  void _subtract() async{
-    // This call to setState tells the Flutter framework that something has
-    // changed in this State, which causes it to rerun the build method below
-    // so that the display can reflect the updated values. If we changed
-    // _counter without calling setState(), then the build method would not be
-    // called again, and so nothing would appear to happen.
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _counter = (prefs.getInt('counter') ?? 0) - 1;
-    print('Pressed $_counter times.');
-    await prefs.setInt('counter', _counter);
-  }
 
-  void _getCounter() async{
-    // This call to setState tells the Flutter framework that something has
-    // changed in this State, which causes it to rerun the build method below
-    // so that the display can reflect the updated values. If we changed
-    // _counter without calling setState(), then the build method would not be
-    // called again, and so nothing would appear to happen.
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    _counter = (prefs.getInt('counter') ?? 0);
+
+  Future<File> _decrementCounter() {
     setState(() {
-
-    });
-  }
-
-  void _decrementCount() async{
-     await _subtract();
-     setState(() {
-
-     });
-  }
-
-  void _incrementCounter() async{
-//      _counter++;
-    await _add();
-    setState(() {
-
+      _counter--;
     });
 
+    // Write the variable as a string to the file.
+    return widget.storage.writeCounter(_counter);
+  }
 
-//    setState(_add);
+  Future<File> _incrementCounter() {
+    setState(() {
+      _counter++;
+    });
+
+    // Write the variable as a string to the file.
+    return widget.storage.writeCounter(_counter);
   }
 
   @override
   initState() {
     super.initState();
     // Add listeners to this class
-    _getCounter();
+    widget.storage.readCounter().then((int value) {
+      setState(() {
+        _counter = value;
+      });
+    });
 
   }
 
@@ -163,7 +172,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                     RaisedButton(
-                      onPressed: _decrementCount,
+                      onPressed: _decrementCounter,
                       child: Text(
                           'Decrement',
                           style: TextStyle(fontSize: 20)
