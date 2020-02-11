@@ -1,9 +1,76 @@
-import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
 
+final String tableTodo = 'count_table';
+final String columnId = '_id';
+final String columnCount = 'count';
+
+class CountObject {
+  int id;
+  int count;
+
+
+  Map<String, dynamic> toMap() {
+    var map = <String, dynamic>{
+      columnCount: count,
+    };
+    if (id != null) {
+      map[columnId] = id;
+    }
+    return map;
+  }
+
+  CountObject();
+
+  CountObject.fromMap(Map<String, dynamic> map) {
+    id = map[columnId];
+    count = map[columnCount];
+  }
+}
+
+class CountProvider {
+  Database db;
+
+  Future open(String path) async {
+    db = await openDatabase(path, version: 1,
+        onCreate: (Database db, int version) async {
+          await db.execute('''
+create table $tableTodo ( 
+  $columnId integer primary key autoincrement, 
+  $columnCount integer not null)
+''');
+        });
+  }
+//  CountProvider();
+
+
+  Future<CountObject> insert(CountObject countInstance) async {
+    countInstance.id = await db.insert(tableTodo, countInstance.toMap());
+    return countInstance;
+  }
+
+  Future<CountObject> getCount(int id) async {
+    List<Map> maps = await db.query(tableTodo,
+        columns: [columnId, columnCount],
+        where: '$columnId = ?',
+        whereArgs: [id]);
+    if (maps.length > 0) {
+      return CountObject.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<int> delete(int id) async {
+    return await db.delete(tableTodo, where: '$columnId = ?', whereArgs: [id]);
+  }
+
+  Future<int> update(CountObject todo) async {
+    return await db.update(tableTodo, todo.toMap(),
+        where: '$columnId = ?', whereArgs: [todo.id]);
+  }
+
+  Future close() async => db.close();
+}
 
 void main(){
   runApp(MyApp());
@@ -27,47 +94,17 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.purple,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page', storage: CounterStorage()),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class CounterStorage {
-  Future<String> get _localPath async {
-    final directory = await getApplicationDocumentsDirectory();
 
-    return directory.path;
-  }
 
-  Future<File> get _localFile async {
-    final path = await _localPath;
-    return File('$path/counter.txt');
-  }
 
-  Future<int> readCounter() async {
-    try {
-      final file = await _localFile;
-
-      // Read the file
-      String contents = await file.readAsString();
-
-      return int.parse(contents);
-    } catch (e) {
-      // If encountering an error, return 0
-      return 0;
-    }
-  }
-
-  Future<File> writeCounter(int counter) async {
-    final file = await _localFile;
-
-    // Write the file
-    return file.writeAsString('$counter');
-  }
-}
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title, @required this.storage}) : super(key: key);
+  MyHomePage({Key key, this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -79,7 +116,6 @@ class MyHomePage extends StatefulWidget {
   // always marked "final".
 
   final String title;
-  final CounterStorage storage;
 
 
   @override
@@ -88,35 +124,71 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  CountProvider cp;
 
+  void _incrementCounter(){
+    if (cp == null){
+      cp = new CountProvider();
+    }
+    getCurrentCount().then((CountObject co){
+      co.count += 1;
+      _counter=co.count;
+      if (cp == null){
+        cp = new CountProvider();
+      }
+      cp.update(co);
+      setState(() {
 
-  Future<File> _decrementCounter() {
-    setState(() {
-      _counter--;
+      });
+    });
+  }
+  void _decrementCounter(){
+    if (cp == null){
+      cp = new CountProvider();
+    }
+    getCurrentCount().then((CountObject co){
+      co.count -= 1;
+      _counter=co.count;
+      if (cp == null){
+        cp = new CountProvider();
+      }
+      cp.update(co);
+      setState(() {
+
+      });
     });
 
-    // Write the variable as a string to the file.
-    return widget.storage.writeCounter(_counter);
+
   }
 
-  Future<File> _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
+  Future<CountObject> getCurrentCount() async{
 
-    // Write the variable as a string to the file.
-    return widget.storage.writeCounter(_counter);
+    await cp.open("mydata.db");
+    CountObject co = await cp.getCount(1);
+    if(co==null){
+      co = new CountObject();
+      co.count=0;
+      co = await cp.insert(co);
+      print(co.id);
+      return co;
+    }
+    return co;
+
   }
 
   @override
   initState() {
     super.initState();
     // Add listeners to this class
-    widget.storage.readCounter().then((int value) {
+    if (cp == null){
+      cp = new CountProvider();
+    }
+    getCurrentCount().then((CountObject value){
       setState(() {
-        _counter = value;
+        _counter=value.count;
       });
     });
+
 
   }
 
@@ -185,30 +257,7 @@ class _MyHomePageState extends State<MyHomePage> {
 //              )
         ),
       ),
-//      floatingActionButton: Padding(
-//        padding: const EdgeInsets.all(40.0),
-//        child: Row(
-//          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//          children: <Widget>[
-//            FloatingActionButton(
-//              onPressed: _incrementCounter,
-//              tooltip: 'Increment',
-//              child: Icon(Icons.add),
-//            ),
-//            FloatingActionButton(
-//              onPressed: () => setState(() => _counter--),
-//              tooltip: 'Decrement',
-//              child: Text("-"),
-//            )
-//          ],
-//        ),
-//      ),
-
-//      floatingActionButton: FloatingActionButton(
-//        onPressed: _incrementCounter,
-//        tooltip: 'Increment',
-//        child: Icon(Icons.add),
-//      ), // This trailing comma makes auto-formatting nicer for build methods.
+//      comma makes auto-formatting nicer for build methods.
     );
   }
 }
