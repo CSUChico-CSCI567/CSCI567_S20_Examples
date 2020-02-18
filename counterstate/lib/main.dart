@@ -1,76 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
 
-final String tableTodo = 'count_table';
-final String columnId = '_id';
-final String columnCount = 'count';
-
-class CountObject {
-  int id;
-  int count;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 
-  Map<String, dynamic> toMap() {
-    var map = <String, dynamic>{
-      columnCount: count,
-    };
-    if (id != null) {
-      map[columnId] = id;
-    }
-    return map;
-  }
 
-  CountObject();
-
-  CountObject.fromMap(Map<String, dynamic> map) {
-    id = map[columnId];
-    count = map[columnCount];
-  }
-}
-
-class CountProvider {
-  Database db;
-
-  Future open(String path) async {
-    db = await openDatabase(path, version: 1,
-        onCreate: (Database db, int version) async {
-          await db.execute('''
-create table $tableTodo ( 
-  $columnId integer primary key autoincrement, 
-  $columnCount integer not null)
-''');
-        });
-  }
-//  CountProvider();
-
-
-  Future<CountObject> insert(CountObject countInstance) async {
-    countInstance.id = await db.insert(tableTodo, countInstance.toMap());
-    return countInstance;
-  }
-
-  Future<CountObject> getCount(int id) async {
-    List<Map> maps = await db.query(tableTodo,
-        columns: [columnId, columnCount],
-        where: '$columnId = ?',
-        whereArgs: [id]);
-    if (maps.length > 0) {
-      return CountObject.fromMap(maps.first);
-    }
-    return null;
-  }
-
-  Future<int> delete(int id) async {
-    return await db.delete(tableTodo, where: '$columnId = ?', whereArgs: [id]);
-  }
-
-  Future<int> update(CountObject todo) async {
-    return await db.update(tableTodo, todo.toMap(),
-        where: '$columnId = ?', whereArgs: [todo.id]);
-  }
-
-  Future close() async => db.close();
-}
 
 void main(){
   runApp(MyApp());
@@ -124,70 +57,47 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
-  CountProvider cp;
+
 
   void _incrementCounter(){
-    if (cp == null){
-      cp = new CountProvider();
-    }
-    getCurrentCount().then((CountObject co){
-      co.count += 1;
-      _counter=co.count;
-      if (cp == null){
-        cp = new CountProvider();
-      }
-      cp.update(co);
-      setState(() {
-
+    Firestore.instance.runTransaction((transaction) async {
+      DocumentSnapshot freshSnap = await Firestore.instance.collection('test').document('u9JWeFMwGZzPp3yvOlGq').get();
+      await transaction.update(freshSnap.reference, {
+        'count': freshSnap['count'] +1,
       });
     });
+
+
+
   }
   void _decrementCounter(){
-    if (cp == null){
-      cp = new CountProvider();
-    }
-    getCurrentCount().then((CountObject co){
-      co.count -= 1;
-      _counter=co.count;
-      if (cp == null){
-        cp = new CountProvider();
-      }
-      cp.update(co);
-      setState(() {
-
+    Firestore.instance.runTransaction((transaction) async {
+      DocumentSnapshot freshSnap = await Firestore.instance.collection('test').document('u9JWeFMwGZzPp3yvOlGq').get();
+      await transaction.update(freshSnap.reference, {
+        'count': freshSnap['count'] -1,
       });
     });
 
 
   }
 
-  Future<CountObject> getCurrentCount() async{
 
-    await cp.open("mydata.db");
-    CountObject co = await cp.getCount(1);
-    if(co==null){
-      co = new CountObject();
-      co.count=0;
-      co = await cp.insert(co);
-      print(co.id);
-      return co;
-    }
-    return co;
-
-  }
 
   @override
   initState() {
     super.initState();
     // Add listeners to this class
-    if (cp == null){
-      cp = new CountProvider();
-    }
-    getCurrentCount().then((CountObject value){
-      setState(() {
-        _counter=value.count;
-      });
-    });
+//    Firestore.instance
+//        .collection('test')
+//        .document('u9JWeFMwGZzPp3yvOlGq')
+//        .get()
+//        .then((DocumentSnapshot ds) {
+//          _counter=ds.data['count'];
+//          setState(() {
+//
+//          });
+//      // use ds as a snapshot
+//    });
 
 
   }
@@ -227,12 +137,22 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Text(
-              'Count:',
+              'Count:', style: Theme.of(context).textTheme.display1
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
+            StreamBuilder(
+              stream: Firestore.instance.collection('test').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return Text(
+                    'Loading Clicks...',
+                    style: Theme.of(context).textTheme.display1
+                );
+                return Text(
+                    snapshot.data.documents[0]['count'].toString(),
+                    style: Theme.of(context).textTheme.display1
+                );
+              },
             ),
+
             Center(
               child: Row(
                   children: <Widget>[

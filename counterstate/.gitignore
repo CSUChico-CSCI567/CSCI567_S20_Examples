@@ -30,6 +30,10 @@
 .pub/
 /build/
 
+#Google Creds
+*.json
+GoogleService-Info.plist
+
 # Web related
 lib/generated_plugin_registrant.dart
 
