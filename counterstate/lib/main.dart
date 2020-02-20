@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 
 
@@ -57,7 +59,21 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  File _image;
 
+  Future getImage() async {
+    var image = await ImagePicker.pickImage(source: ImageSource.camera);
+
+    setState(() {
+      _image = image;
+    });
+  }
+  void _incrementCounter2(){
+    _counter+=1;
+    setState(() {
+
+    });
+  }
 
   void _incrementCounter(){
     Firestore.instance.runTransaction((transaction) async {
@@ -116,10 +132,11 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
+      body: FractionallySizedBox(
+        widthFactor: 0.900,
+  //                color: Colors.amber[600],
+        heightFactor: .50,
+        child:  Column(
           // Column is also a layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
           // children horizontally, and tries to be as tall as its parent.
@@ -136,9 +153,13 @@ class _MyHomePageState extends State<MyHomePage> {
           // horizontal).
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            Text(
+            _image == null
+                    ? Text('No image selected.')
+                    : Image.file(_image),
+             Text(
               'Count:', style: Theme.of(context).textTheme.display1
             ),
+            Text('$_counter'),
             StreamBuilder(
               stream: Firestore.instance.collection('test').snapshots(),
               builder: (context, snapshot) {
@@ -176,7 +197,18 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
 //              )
         ),
+
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: getImage,
+        tooltip: 'Pick Image',
+        child: Icon(Icons.add_a_photo),
+      ),
+//      floatingActionButton: FloatingActionButton(
+//        onPressed: _incrementCounter2,
+//        tooltip: 'Pick Image',
+//        child: Icon(Icons.add),
+//      ),
 //      comma makes auto-formatting nicer for build methods.
     );
   }
