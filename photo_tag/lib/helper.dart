@@ -11,32 +11,68 @@ import 'package:uuid/uuid.dart';
 class SecondScreenState extends State<SecondScreen> {
 
   File _image;
+  List<String> _labelTexts;
 
-  void _upload(List<String> labelTexts) async{
-    var uuid = Uuid();
-
-    final String uid = uuid.v4();
-    final String downloadURL = await _uploadFile(uid);
-
-    await _addItem(downloadURL, labelTexts);
+  @override
+  void initState() {
+    _labelTexts=null;
+    super.initState();
   }
 
+  void _upload() async{
+    if(_labelTexts != null && _image != null){
+      var uuid = Uuid();
 
-  Future<List<String>> detectLabels() async {
+      final String uid = uuid.v4();
+      final String downloadURL = await _uploadFile(uid);
+      await _addItem(downloadURL, _labelTexts);
+    }
+  }
+
+  Future getImage() async {
+    var image = await ImagePicker.pickImage(source: ImageSource.camera);
+    _image = image;
+    await detectLabels();
+    setState(() {
+
+    });
+  }
+
+  Future detectLabels() async {
     final FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(
         _image);
     final ImageLabeler cloudLabeler = FirebaseVision.instance.cloudImageLabeler();
 
     final List<ImageLabel> cloudLabels = await cloudLabeler.processImage(visionImage);
+    final TextRecognizer textRecognizer = FirebaseVision.instance.textRecognizer();
+    final VisionText visionText = await textRecognizer.processImage(visionImage);
 
-    List<String> labelTexts = new List();
+    String text = visionText.text;
+    for (TextBlock block in visionText.blocks) {
+      final Rect boundingBox = block.boundingBox;
+      final List<Offset> cornerPoints = block.cornerPoints;
+      final String text = block.text;
+      final List<RecognizedLanguage> languages = block.recognizedLanguages;
+      print(text);
+
+      for (TextLine line in block.lines) {
+        // Same getters as TextBlock
+        for (TextElement element in line.elements) {
+          // Same getters as TextBlock
+        }
+      }
+    }
+
+//    print(cloudLabels);
+
+    _labelTexts = new List();
     for (ImageLabel label in cloudLabels) {
       final String text = label.text;
       final String entityId = label.entityId;
       final double confidence = label.confidence;
-      labelTexts.add(text);
+      print(text);
+      _labelTexts.add(text);
     }
-
   }
 
   Future<String> _uploadFile(filename) async {
@@ -60,6 +96,20 @@ class SecondScreenState extends State<SecondScreen> {
     });
   }
 
+  Widget getLabels(){
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: _labelTexts.length,
+      itemBuilder: (BuildContext context, int index) {
+        return Container(
+          height: 50,
+//          color: Colors.amber[colorCodes[index]],
+          child: Center(child: Text('${_labelTexts[index]}')),
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // TODO: implement build
@@ -72,9 +122,30 @@ class SecondScreenState extends State<SecondScreen> {
           children: <Widget>[
             _image == null
             ? Text('No image selected.')
-            : Image.file(_image);
+            : Image.file(_image,width: 300),
+            Container(
+              margin: const EdgeInsets.all(10.0),
+              height: 200.0,
+              child:_labelTexts==null
+                  ? Text('No image selected.')
+                  :getLabels()
+            ),
+            RaisedButton(
+              onPressed: () {
+                _upload();
+              },
+              child: const Text(
+                  'Submit',
+                  style: TextStyle(fontSize: 20)
+              ),
+            )
           ]
-        )
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: getImage,
+          tooltip: 'Pick Image',
+          child: Icon(Icons.add_a_photo),
+        ),
     );
   }
 }

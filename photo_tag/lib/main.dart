@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:photo_tag/helper.dart';
+
 
 void main() => runApp(MyApp());
 
@@ -20,7 +24,8 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+//      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: SecondScreen(title: "Test",),
     );
   }
 }
@@ -45,17 +50,71 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  FixedExtentScrollController scrollController;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+
+  @override
+  void initState() {
+    scrollController = FixedExtentScrollController();
+    super.initState();
   }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  Widget person(AsyncSnapshot<QuerySnapshot> snapshot, index){
+    try{
+      return Column(
+        children: <Widget>[
+          ListTile(title: Text(snapshot.data.documents[index]['first'] + " " + snapshot.data.documents[index]['last'])),
+          Image.network(
+            snapshot.data.documents[index]['downloadURL'], height: 50,
+          ),
+        ],
+      );
+    }
+    catch(e){
+      return ListTile(title: Text(snapshot.data.documents[index]['first'] + " " + snapshot.data.documents[index]['last']));
+    }
+
+  }
+
+//  Widget getNames(){
+//    return StreamBuilder(
+//      stream: Firestore.instance.collection('people').snapshots(),
+//      builder: (context, snapshot) {
+////        print('Has error: ${snapshot.hasError}');
+////        print('Has data: ${snapshot.hasData}');
+////        print('Snapshot Data ${snapshot.data}');
+//
+//        if (snapshot.hasError) {
+//          return Text(snapshot.error);
+//        }
+//        if (!snapshot.hasData) return const Text('Loading People...');
+//
+//        if (snapshot.hasData) {
+//          print('Snapshot Length ${snapshot.data.documents.length}');
+//          return Expanded(
+//            child:
+//            Scrollbar(
+//              child: ListView.builder(
+//                physics: const AlwaysScrollableScrollPhysics(),
+//                itemCount: snapshot.data.documents.length,
+//                itemBuilder: (context, index) {
+//                  return person(snapshot, index);
+//                },
+//              ),
+//
+//            ),
+//          );
+//        }
+//      },
+//    );
+//  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -71,41 +130,66 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
+      body: ListWheelScrollView(
+        controller: scrollController,
+        physics: const FixedExtentScrollPhysics(),
+        itemExtent: 120,
+        children: [
+
+         ]
+      )
+
+    );
+  }
+}
+
+class LetterWheel extends StatefulWidget {
+  const LetterWheel({Key key}) : super(key: key);
+
+  @override
+  _LetterWheelState createState() => _LetterWheelState();
+}
+
+class _LetterWheelState extends State<LetterWheel> {
+  FixedExtentScrollController scrollController;
+
+  @override
+  void initState() {
+    scrollController = FixedExtentScrollController();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return ListWheelScrollView(
+      controller: FixedExtentScrollController(),
+      physics: const FixedExtentScrollPhysics(),
+      itemExtent: 120,
+      children: ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+          .map(
+            (letter) => Container(
+          margin: const EdgeInsets.all(10),
+          height: 90,
+          color: Colors.white,
+          child: GestureDetector(
+            onTap: () => print('Letter "$letter" is pressed.'),
+            child: Center(
+              child: Text(
+                letter,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.display1,
-            ),
-          ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.camera),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      )
+          .toList(),
     );
   }
 }
