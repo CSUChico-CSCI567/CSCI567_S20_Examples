@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:geolocator/geolocator.dart';
 
 
 
@@ -60,6 +61,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
   File _image;
+  Position _position;
+  List<Placemark> placemark;
+  List<int> list;
 
   Future getImage() async {
     var image = await ImagePicker.pickImage(source: ImageSource.camera);
@@ -68,12 +72,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _image = image;
     });
   }
-  void _incrementCounter2(){
-    _counter+=1;
-    setState(() {
 
-    });
-  }
 
   void _incrementCounter(){
     Firestore.instance.runTransaction((transaction) async {
@@ -97,25 +96,51 @@ class _MyHomePageState extends State<MyHomePage> {
 
   }
 
+  void getLocation() async{
+     _position = await Geolocator().getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+     
+
+//     placemark = await Geolocator().placemarkFromPosition(_position);
+    placemark = await Geolocator().placemarkFromCoordinates(52.2165157, 6.9437819);
+     for (Placemark place in placemark) {
+        print(place.country);
+     }
+
+//     print(placemark);
+     setState(() {
+
+     });
+  }
+
 
 
   @override
   initState() {
     super.initState();
+    getLocation();
+    list = new List<int>.generate(100, (i) => i + 1);
     // Add listeners to this class
-//    Firestore.instance
-//        .collection('test')
-//        .document('u9JWeFMwGZzPp3yvOlGq')
-//        .get()
-//        .then((DocumentSnapshot ds) {
-//          _counter=ds.data['count'];
-//          setState(() {
-//
-//          });
-//      // use ds as a snapshot
-//    });
+    Firestore.instance
+        .collection('test')
+        .document('u9JWeFMwGZzPp3yvOlGq')
+        .get()
+        .then((DocumentSnapshot ds) {
+          _counter=ds.data['count'];
+          setState(() {
+
+          });
+      // use ds as a snapshot
+    });
 
 
+  }
+
+  List<Widget> getChildren(){
+    List<Widget> tiles = [];
+    for (var i in list) {
+      tiles.add(Card( child: ListTile(title: Text(i.toString()),)));
+    }
+    return tiles;
   }
 
   @override
@@ -132,11 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: FractionallySizedBox(
-        widthFactor: 0.900,
-  //                color: Colors.amber[600],
-        heightFactor: .50,
-        child:  Column(
+      body:  Column(
           // Column is also a layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
           // children horizontally, and tries to be as tall as its parent.
@@ -157,9 +178,26 @@ class _MyHomePageState extends State<MyHomePage> {
                     ? Text('No image selected.')
                     : Image.file(_image),
              Text(
-              'Count:', style: Theme.of(context).textTheme.display1
+                'Count:', style: Theme.of(context).textTheme.display1
             ),
-            Text('$_counter'),
+            _position == null
+                ? Text('No Position.')
+                : Text('$_position'),
+            placemark == null
+            ? Text('No Place.')
+            : Container(
+              height: 300,
+              child: Center(
+                child: list==null
+                  ? Text("No List")
+                  : ListWheelScrollView(
+                  children: getChildren(),
+                  itemExtent: 100,
+
+
+                ),
+              ),
+            ),
             StreamBuilder(
               stream: Firestore.instance.collection('test').snapshots(),
               builder: (context, snapshot) {
@@ -198,7 +236,7 @@ class _MyHomePageState extends State<MyHomePage> {
 //              )
         ),
 
-      ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: getImage,
         tooltip: 'Pick Image',
