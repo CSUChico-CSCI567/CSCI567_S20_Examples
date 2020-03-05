@@ -26,12 +26,17 @@ class SecondScreenState extends State<SecondScreen> {
       final String uid = uuid.v4();
       final String downloadURL = await _uploadFile(uid);
       await _addItem(downloadURL, _labelTexts);
+      Navigator.pop(context);
     }
   }
 
   Future getImage() async {
     var image = await ImagePicker.pickImage(source: ImageSource.camera);
     _image = image;
+    _labelTexts = null;
+    setState(() {
+
+    });
     await detectLabels();
     setState(() {
 
@@ -71,7 +76,7 @@ class SecondScreenState extends State<SecondScreen> {
       final String entityId = label.entityId;
       final double confidence = label.confidence;
       print(text);
-      _labelTexts.add(text);
+      _labelTexts.add(text + " " + confidence.toString());
     }
   }
 
@@ -90,7 +95,7 @@ class SecondScreenState extends State<SecondScreen> {
   }
 
   Future<void> _addItem(String downloadURL, List<String> labels) async {
-    await Firestore.instance.collection('people').add(<String, dynamic>{
+    await Firestore.instance.collection('photos').add(<String, dynamic>{
       'downloadURL': downloadURL,
       'labels': labels,
     });
@@ -102,7 +107,7 @@ class SecondScreenState extends State<SecondScreen> {
       itemCount: _labelTexts.length,
       itemBuilder: (BuildContext context, int index) {
         return Container(
-          height: 50,
+          height: 25,
 //          color: Colors.amber[colorCodes[index]],
           child: Center(child: Text('${_labelTexts[index]}')),
         );

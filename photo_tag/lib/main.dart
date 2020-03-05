@@ -24,8 +24,8 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-//      home: MyHomePage(title: 'Flutter Demo Home Page'),
-      home: SecondScreen(title: "Test",),
+      home: MyHomePage(title: 'Flutter Demo Home Page'),
+//      home: SecondScreen(title: "Test",),
     );
   }
 }
@@ -65,55 +65,51 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  Widget person(AsyncSnapshot<QuerySnapshot> snapshot, index){
+  Widget photo_widget(AsyncSnapshot<QuerySnapshot> snapshot, index){
     try{
       return Column(
         children: <Widget>[
-          ListTile(title: Text(snapshot.data.documents[index]['first'] + " " + snapshot.data.documents[index]['last'])),
+          ListTile(title: Text(snapshot.data.documents[index]['labels'][0])),
           Image.network(
-            snapshot.data.documents[index]['downloadURL'], height: 50,
+            snapshot.data.documents[index]['downloadURL'], height: 150,
           ),
         ],
       );
     }
     catch(e){
-      return ListTile(title: Text(snapshot.data.documents[index]['first'] + " " + snapshot.data.documents[index]['last']));
+      return ListTile(title: Text("Error:" + e.toString()));
     }
 
   }
 
-//  Widget getNames(){
-//    return StreamBuilder(
-//      stream: Firestore.instance.collection('people').snapshots(),
-//      builder: (context, snapshot) {
-////        print('Has error: ${snapshot.hasError}');
-////        print('Has data: ${snapshot.hasData}');
-////        print('Snapshot Data ${snapshot.data}');
-//
-//        if (snapshot.hasError) {
-//          return Text(snapshot.error);
-//        }
-//        if (!snapshot.hasData) return const Text('Loading People...');
-//
-//        if (snapshot.hasData) {
-//          print('Snapshot Length ${snapshot.data.documents.length}');
-//          return Expanded(
-//            child:
-//            Scrollbar(
-//              child: ListView.builder(
-//                physics: const AlwaysScrollableScrollPhysics(),
-//                itemCount: snapshot.data.documents.length,
-//                itemBuilder: (context, index) {
-//                  return person(snapshot, index);
-//                },
-//              ),
-//
-//            ),
-//          );
-//        }
-//      },
-//    );
-//  }
+  Widget getNames(){
+    return StreamBuilder(
+      stream: Firestore.instance.collection('photos').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Text(snapshot.error);
+        }
+        if (!snapshot.hasData) return const Text('Loading Photos...');
+
+        if (snapshot.hasData) {
+          print('Snapshot Length ${snapshot.data.documents.length}');
+          return Expanded(
+            child:
+            Scrollbar(
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: snapshot.data.documents.length,
+                itemBuilder: (context, index) {
+                  return photo_widget(snapshot, index);
+                },
+              ),
+            ),
+          );
+        }
+        return null;
+      },
+    );
+  }
 
 
   @override
@@ -130,66 +126,24 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: ListWheelScrollView(
-        controller: scrollController,
-        physics: const FixedExtentScrollPhysics(),
-        itemExtent: 120,
+      body: Column(
         children: [
-
-         ]
-      )
+          getNames()
+        ]
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+      // Add your onPressed code here!
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => SecondScreen(title: "Get a photo",)),
+          );
+        },
+        child: Icon(Icons.add),
+        backgroundColor: Colors.green,
+      ),
 
     );
   }
 }
 
-class LetterWheel extends StatefulWidget {
-  const LetterWheel({Key key}) : super(key: key);
-
-  @override
-  _LetterWheelState createState() => _LetterWheelState();
-}
-
-class _LetterWheelState extends State<LetterWheel> {
-  FixedExtentScrollController scrollController;
-
-  @override
-  void initState() {
-    scrollController = FixedExtentScrollController();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    scrollController.dispose();
-    super.dispose();
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    return ListWheelScrollView(
-      controller: FixedExtentScrollController(),
-      physics: const FixedExtentScrollPhysics(),
-      itemExtent: 120,
-      children: ['A', 'B', 'C', 'D', 'E', 'F', 'G']
-          .map(
-            (letter) => Container(
-          margin: const EdgeInsets.all(10),
-          height: 90,
-          color: Colors.white,
-          child: GestureDetector(
-            onTap: () => print('Letter "$letter" is pressed.'),
-            child: Center(
-              child: Text(
-                letter,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ),
-      )
-          .toList(),
-    );
-  }
-}
