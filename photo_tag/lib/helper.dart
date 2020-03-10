@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 //import 'package:path_provider/path_provider.dart';
 import 'package:firebase_ml_vision/firebase_ml_vision.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:photo_tag/sign_in.dart';
 import 'package:uuid/uuid.dart';
 
 class SecondScreenState extends State<SecondScreen> {
@@ -98,6 +99,7 @@ class SecondScreenState extends State<SecondScreen> {
     await Firestore.instance.collection('photos').add(<String, dynamic>{
       'downloadURL': downloadURL,
       'labels': labels,
+      'owner': user_id
     });
   }
 
